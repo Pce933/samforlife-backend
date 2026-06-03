@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 8000;
 
 // ── CORS ───────────────────────────────────────────────────────
 const allowedOrigins = process.env.FRONTEND_URL
-  ? [process.env.FRONTEND_URL, 'http://localhost:3000']
+  ? [process.env.FRONTEND_URL.replace(/\/$/, ''), 'http://localhost:3000']
   : '*';
 
 app.use(cors({
