@@ -55,6 +55,8 @@ app.get('/api/db-status', (req, res) => {
   res.json({
     readyState: mongoose.connection.readyState,
     readyStateText: ['disconnected', 'connected', 'connecting', 'disconnecting'][mongoose.connection.readyState],
+    connectionStatus: global.mongoConnectionStatus || 'unknown',
+    connectionError: global.mongoConnectionError || null,
     mongoUrl: maskedUrl,
     envKeys: Object.keys(process.env).filter(k => k.includes('MONGO') || k.includes('DB') || k.includes('URL') || k.includes('PORT'))
   });
