@@ -116,6 +116,57 @@ app.get('/api/db-net-test', async (req, res) => {
   res.json(results);
 });
 
+app.get('/api/db-test-direct', async (req, res) => {
+  const mongoose = require('mongoose');
+  const results = {
+    status: null,
+    error: null
+  };
+  
+  if (!process.env.MONGO_URL) {
+    results.status = 'error';
+    results.error = 'MONGO_URL is not set';
+    return res.json(results);
+  }
+  
+  try {
+    // Construct a direct connection URL by taking the first host of the current MONGO_URL
+    let directUrl = process.env.MONGO_URL;
+    if (directUrl.includes(',')) {
+      // If it's the multi-host URL, grab the first host and append directConnection=true
+      const hostsPart = directUrl.split('@')[1].split('/')[0];
+      const firstHost = hostsPart.split(',')[0];
+      const creds = directUrl.split('@')[0];
+      const rest = directUrl.split('@')[1].split('/').slice(1).join('/');
+      directUrl = `${creds}@${firstHost}/${rest}`;
+      if (!directUrl.includes('directConnection=true')) {
+        directUrl += (directUrl.includes('?') ? '&' : '?') + 'directConnection=true';
+      }
+    } else if (directUrl.includes('mongodb+srv://')) {
+      // If it's SRV, we can't do direct connection easily unless we use one of the resolved hosts.
+      // Let's use ac-jh5b7dd-shard-00-00.z44fllm.mongodb.net
+      const creds = directUrl.split('@')[0].replace('mongodb+srv://', 'mongodb://');
+      const dbName = directUrl.split('.mongodb.net/')[1] || '';
+      directUrl = `${creds}@ac-jh5b7dd-shard-00-00.z44fllm.mongodb.net:27017/${dbName}`;
+      directUrl += (directUrl.includes('?') ? '&' : '?') + 'ssl=true&authSource=admin&directConnection=true';
+    }
+    
+    // Create a new connection instance to avoid side-effects on main connection
+    const conn = await mongoose.createConnection(directUrl, {
+      serverSelectionTimeoutMS: 5000
+    }).asPromise();
+    
+    results.status = 'connected';
+    results.readyState = conn.readyState;
+    await conn.close();
+  } catch (err) {
+    results.status = 'failed';
+    results.error = err.message;
+  }
+  
+  res.json(results);
+});
+
 app.use('/api', apiRouter);
 
 // ── Export for Vercel Serverless ───────────────────────────────
