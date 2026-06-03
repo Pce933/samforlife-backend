@@ -17,24 +17,9 @@ let Contact, Volunteer, Partnership, Newsletter, FundraiseSubmission,
 
 if (MONGO_URL) {
   console.log('Connecting to MongoDB at:', MONGO_URL);
-  global.mongoConnectionStatus = 'connecting';
-  mongoose.connect(MONGO_URL, {
-    family: 4,
-    serverSelectionTimeoutMS: 5000
-  })
-    .then(() => {
-      console.log('Successfully connected to MongoDB.');
-      global.mongoConnectionStatus = 'connected';
-    })
-    .catch((err) => {
-      console.error('MongoDB connection error:', err);
-      global.mongoConnectionStatus = 'error';
-      global.mongoConnectionError = err.message || String(err);
-    });
-  
-  mongoose.connection.on('error', (err) => {
-    global.mongoConnectionError = err.message || String(err);
-  });
+  mongoose.connect(MONGO_URL)
+    .then(() => console.log('Successfully connected to MongoDB.'))
+    .catch((err) => console.error('MongoDB connection error:', err));
   
   dbConnection = mongoose.connection;
 
