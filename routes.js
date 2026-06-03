@@ -120,13 +120,16 @@ router.post('/forms/contact', async (req, res) => {
 
     const doc = await Contact.create({ id: newID(), name, email, subject, message, status: 'new', created_at: nowISO() });
     
+    // Fetch custom settings templates
+    const settings = await SiteSettings.findOne({ _singleton: true }) || {};
+    
     // Send email notification to admin (asynchronously to avoid blocking response)
-    sendContactNotification({ name, email, subject, message }).catch((err) => {
+    sendContactNotification({ name, email, subject, message }, settings.email_contact_admin_subject).catch((err) => {
       console.error('[SMTP Error] Contact notification email failed to send:', err);
     });
 
     // Send auto-reply confirmation to the visitor
-    sendContactConfirmation(email, name).catch((err) => {
+    sendContactConfirmation(email, name, settings.email_contact_user_subject, settings.email_contact_user_body).catch((err) => {
       console.error('[SMTP Error] Contact user confirmation email failed to send:', err);
     });
 
@@ -148,13 +151,16 @@ router.post('/forms/volunteer', async (req, res) => {
 
     const doc = await Volunteer.create({ id: newID(), name, email, phone, skills, availability, why, status: 'new', created_at: nowISO() });
     
+    // Fetch custom settings templates
+    const settings = await SiteSettings.findOne({ _singleton: true }) || {};
+
     // Send email notification to admin (asynchronously to avoid blocking response)
-    sendVolunteerNotification({ name, email, phone, skills, availability, why }).catch((err) => {
+    sendVolunteerNotification({ name, email, phone, skills, availability, why }, settings.email_volunteer_admin_subject).catch((err) => {
       console.error('[SMTP Error] Volunteer notification email failed to send:', err);
     });
 
     // Send auto-reply confirmation to the volunteer
-    sendVolunteerConfirmation(email, name).catch((err) => {
+    sendVolunteerConfirmation(email, name, settings.email_volunteer_user_subject, settings.email_volunteer_user_body).catch((err) => {
       console.error('[SMTP Error] Volunteer user confirmation email failed to send:', err);
     });
 
@@ -176,13 +182,16 @@ router.post('/forms/partnership', async (req, res) => {
 
     const doc = await Partnership.create({ id: newID(), company, name, email, phone, interest, message, status: 'new', created_at: nowISO() });
     
+    // Fetch custom settings templates
+    const settings = await SiteSettings.findOne({ _singleton: true }) || {};
+
     // Send email notification to admin (asynchronously to avoid blocking response)
-    sendPartnershipNotification({ company, name, email, phone, interest, message }).catch((err) => {
+    sendPartnershipNotification({ company, name, email, phone, interest, message }, settings.email_partnership_admin_subject).catch((err) => {
       console.error('[SMTP Error] Partnership notification email failed to send:', err);
     });
 
     // Send auto-reply confirmation to the partner
-    sendPartnershipConfirmation(email, name, company).catch((err) => {
+    sendPartnershipConfirmation(email, name, company, settings.email_partnership_user_subject, settings.email_partnership_user_body).catch((err) => {
       console.error('[SMTP Error] Partnership user confirmation email failed to send:', err);
     });
 
@@ -224,14 +233,17 @@ router.post('/forms/fundraise-idea', async (req, res) => {
 
     const doc = await FundraiseSubmission.create({ id: newID(), name, email, idea, status: 'new', created_at: nowISO() });
     
+    // Fetch custom settings templates
+    const settings = await SiteSettings.findOne({ _singleton: true }) || {};
+
     // Send email notification to admin (asynchronously to avoid blocking response)
-    sendFundraiseNotification({ name, email, idea }).catch((err) => {
+    sendFundraiseNotification({ name, email, idea }, settings.email_fundraise_admin_subject).catch((err) => {
       console.error('[SMTP Error] Fundraise notification email failed to send:', err);
     });
 
     // Send auto-reply confirmation to the fundraiser (if email is provided)
     if (email && email.trim() !== '') {
-      sendFundraiseConfirmation(email, name).catch((err) => {
+      sendFundraiseConfirmation(email, name, settings.email_fundraise_user_subject, settings.email_fundraise_user_body).catch((err) => {
         console.error('[SMTP Error] Fundraise user confirmation email failed to send:', err);
       });
     }

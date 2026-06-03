@@ -219,6 +219,18 @@ if (MONGO_URL) {
     receipt_address: { type: String },
     receipt_thank_you: { type: String },
     invoice_terms: { type: String },
+    email_contact_admin_subject: { type: String },
+    email_contact_user_subject: { type: String },
+    email_contact_user_body: { type: String },
+    email_volunteer_admin_subject: { type: String },
+    email_volunteer_user_subject: { type: String },
+    email_volunteer_user_body: { type: String },
+    email_partnership_admin_subject: { type: String },
+    email_partnership_user_subject: { type: String },
+    email_partnership_user_body: { type: String },
+    email_fundraise_admin_subject: { type: String },
+    email_fundraise_user_subject: { type: String },
+    email_fundraise_user_body: { type: String },
     updated_at: { type: String, default: nowISO }
   }, {
     versionKey: false,

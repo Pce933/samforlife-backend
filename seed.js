@@ -147,7 +147,19 @@ const DEFAULT_SETTINGS = {
   footer_copyright: '© 2026 SAM for Life. Registered charity (pending).',
   social_facebook: '#',
   social_instagram: '#',
-  social_linkedin: '#'
+  social_linkedin: '#',
+  email_contact_admin_subject: '[Contact Form] {subject} - from {name}',
+  email_contact_user_subject: 'We have received your message - SAM for Life',
+  email_contact_user_body: `<p>Dear {name},</p>\n<p>Thank you for reaching out to us at <strong>SAM for Life</strong>.</p>\n<p>We wanted to let you know that we have successfully received your message. Our team is currently reviewing it and will get back to you as soon as possible (usually within 1-2 business days).</p>\n<p>In the meantime, feel free to browse our website to learn more about our programmes and the impact we are making together.</p>\n<br>\n<p>Warm regards,</p>\n<p><strong>The SAM for Life Team</strong></p>`,
+  email_volunteer_admin_subject: '[Volunteer Apply] New Application from {name}',
+  email_volunteer_user_subject: 'Thank you for your Volunteer Application - SAM for Life',
+  email_volunteer_user_body: `<p>Dear {name},</p>\n<p>Thank you for your interest in volunteering with <strong>SAM for Life</strong>! We are incredibly grateful for your willingness to dedicate your time and skills to support our mission.</p>\n<p>This is to confirm that we have received your application. Our volunteer coordinator will review your profile, skills, and availability, and contact you shortly to schedule an onboarding chat or discuss potential opportunities.</p>\n<p>Thank you once again for your support and for joining hands with us.</p>\n<br>\n<p>Warm regards,</p>\n<p><strong>The SAM for Life Team</strong></p>`,
+  email_partnership_admin_subject: '[Partnership Inquiry] {company} - {name}',
+  email_partnership_user_subject: 'Partnership Inquiry Received - SAM for Life',
+  email_partnership_user_body: `<p>Dear {name},</p>\n<p>Thank you for contacting us regarding a potential partnership between <strong>{company}</strong> and <strong>SAM for Life</strong>.</p>\n<p>We are excited about the possibility of collaborating to drive positive impact. We have received your partnership inquiry, and our development team will review the details and get in touch with you shortly to explore next steps.</p>\n<p>If you have any supporting documents or additional details to share in the meantime, feel free to reply directly to this email.</p>\n<br>\n<p>Warm regards,</p>\n<p><strong>The SAM for Life Team</strong></p>`,
+  email_fundraise_admin_subject: '[Fundraising Idea] New Idea Submitted by {name}',
+  email_fundraise_user_subject: 'Thank you for your Fundraising Idea - SAM for Life',
+  email_fundraise_user_body: `<p>Dear {name},</p>\n<p>Thank you for submitting your fundraising idea to <strong>SAM for Life</strong>! We love creative and passionate ideas that help raise awareness and support for our cause.</p>\n<p>We have successfully received your idea, and our team will review it. We appreciate you taking the initiative to help fundraise for us.</p>\n<br>\n<p>Warm regards,</p>\n<p><strong>The SAM for Life Team</strong></p>`
 };
 
 async function seedCollection(model, data) {
@@ -165,6 +177,33 @@ async function seedSettings() {
   if (!existing) {
     await SiteSettings.create({ _singleton: true, ...DEFAULT_SETTINGS, updated_at: nowISO() });
     return true;
+  } else {
+    // Check if new email fields are missing, and if so, update the document with defaults
+    let updated = false;
+    const emailFields = [
+      'email_contact_admin_subject', 'email_contact_user_subject', 'email_contact_user_body',
+      'email_volunteer_admin_subject', 'email_volunteer_user_subject', 'email_volunteer_user_body',
+      'email_partnership_admin_subject', 'email_partnership_user_subject', 'email_partnership_user_body',
+      'email_fundraise_admin_subject', 'email_fundraise_user_subject', 'email_fundraise_user_body'
+    ];
+    for (const field of emailFields) {
+      if (existing[field] === undefined || existing[field] === null || existing[field] === '') {
+        existing[field] = DEFAULT_SETTINGS[field];
+        updated = true;
+      }
+    }
+    if (updated) {
+      existing.updated_at = nowISO();
+      // Use markModified if it's a Mongoose model (which it is when MONGO_URL is set)
+      if (existing.save) {
+        await existing.save();
+      } else {
+        // Fallback for mock local JSON database
+        await SiteSettings.updateOne({ _singleton: true }, { $set: existing });
+      }
+      console.log('Updated existing settings document with new email template defaults.');
+      return true;
+    }
   }
   return false;
 }
