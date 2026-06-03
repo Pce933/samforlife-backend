@@ -63,6 +63,8 @@ router.get('/health', (req, res) => {
 // ===== PUBLIC: Read-only CMS content for website =====
 router.get('/cms/all', async (req, res) => {
   try {
+    // Set Cache-Control header for Vercel CDN Edge Caching (10s fresh, stale-while-revalidate for 1 hour)
+    res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate=3600');
     const [
       settingsDoc,
       stories,
