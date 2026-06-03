@@ -63,19 +63,40 @@ router.get('/health', (req, res) => {
 // ===== PUBLIC: Read-only CMS content for website =====
 router.get('/cms/all', async (req, res) => {
   try {
-    const settingsDoc = await SiteSettings.findOne({ _singleton: true });
+    const [
+      settingsDoc,
+      stories,
+      news,
+      team,
+      values,
+      programme,
+      fundraise_ideas,
+      involvement,
+      impact_stats
+    ] = await Promise.all([
+      SiteSettings.findOne({ _singleton: true }),
+      publicList(Story),
+      publicList(NewsItem),
+      listAll(TeamMember),
+      listAll(Value),
+      listAll(ProgrammeStep),
+      listAll(FundraiseIdea),
+      listAll(InvolvementCard),
+      listAll(ImpactStat)
+    ]);
+
     const settings = settingsDoc ? clean(settingsDoc) : {};
 
     res.json({
       settings,
-      stories: await publicList(Story),
-      news: await publicList(NewsItem),
-      team: await listAll(TeamMember),
-      values: await listAll(Value),
-      programme: await listAll(ProgrammeStep),
-      fundraise_ideas: await listAll(FundraiseIdea),
-      involvement: await listAll(InvolvementCard),
-      impact_stats: await listAll(ImpactStat)
+      stories,
+      news,
+      team,
+      values,
+      programme,
+      fundraise_ideas,
+      involvement,
+      impact_stats
     });
   } catch (err) {
     res.status(500).json({ detail: err.message });
