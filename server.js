@@ -167,6 +167,31 @@ app.get('/api/db-test-direct', async (req, res) => {
   res.json(results);
 });
 
+app.get('/api/db-test-srv', async (req, res) => {
+  const mongoose = require('mongoose');
+  const results = {
+    status: null,
+    error: null
+  };
+  
+  const srvUrl = 'mongodb+srv://samAdmin:ej3XeaEecdELiBio@clustersam.z44fllm.mongodb.net/samforlife?retryWrites=true&w=majority&appName=ClusterSam';
+  
+  try {
+    const conn = await mongoose.createConnection(srvUrl, {
+      serverSelectionTimeoutMS: 5000
+    }).asPromise();
+    
+    results.status = 'connected';
+    results.readyState = conn.readyState;
+    await conn.close();
+  } catch (err) {
+    results.status = 'failed';
+    results.error = err.message;
+  }
+  
+  res.json(results);
+});
+
 app.use('/api', apiRouter);
 
 // ── Export for Vercel Serverless ───────────────────────────────
