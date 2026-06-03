@@ -461,6 +461,82 @@ const sendFundraiseConfirmation = async (email, name, customSubject, customBody)
   });
 };
 
+/**
+ * Send an email alert to the admin about a new donation.
+ */
+const sendDonationNotification = async (data, customSubject) => {
+  const html = getEmailWrapper('New Donation Received', `
+    <div class="section-title">Donation Details</div>
+    
+    <div class="field-group">
+      <div class="field-label">Donor Name</div>
+      <div class="field-value">${data.name || 'Anonymous'}</div>
+    </div>
+    
+    <div class="field-group">
+      <div class="field-label">Donor Email</div>
+      <div class="field-value">${data.email ? `<a href="mailto:${data.email}">${data.email}</a>` : 'N/A'}</div>
+    </div>
+    
+    <div class="field-group">
+      <div class="field-label">Donation Amount</div>
+      <div class="field-value">£${parseFloat(data.amount || 0).toFixed(2)}</div>
+    </div>
+    
+    <div class="field-group">
+      <div class="field-label">Frequency</div>
+      <div class="field-value">${data.frequency === 'monthly' ? 'Monthly' : 'One-time'}</div>
+    </div>
+    
+    <div class="field-group">
+      <div class="field-label">Transaction Reference</div>
+      <div class="field-value">${data.transaction_id}</div>
+    </div>
+  `);
+
+  const subjectTemplate = customSubject || '[Donation Received] New {frequency} donation of £{amount} from {name}';
+  
+  const formattedData = {
+    ...data,
+    amount: parseFloat(data.amount || 0).toFixed(2),
+    frequency: data.frequency === 'monthly' ? 'monthly' : 'one-time'
+  };
+
+  return sendNotificationEmail({
+    subject: replacePlaceholders(subjectTemplate, formattedData),
+    html,
+  });
+};
+
+/**
+ * Send an email thank-you receipt to the donor (end-user).
+ */
+const sendDonationConfirmation = async (email, name, amount, frequency, transactionId, customSubject, customBody) => {
+  const subjectTemplate = customSubject || 'Thank you for your donation - SAM for Life';
+  const defaultBody = `<p>Dear {name},</p>\n<p>Thank you so much for your generous {frequency} donation of <strong>£{amount}</strong> to <strong>SAM for Life</strong>.</p>\n<p>Your support helps us empower young people with special needs, giving them training, jobs, and a route to independence.</p>\n<p><strong>Transaction Reference:</strong> {transaction_id}</p>\n<br>\n<p>With gratitude,</p>\n<p><strong>The SAM for Life Team</strong></p>`;
+  const bodyTemplate = customBody || defaultBody;
+
+  const data = {
+    name: name || 'Friend',
+    email,
+    amount: parseFloat(amount || 0).toFixed(2),
+    frequency: frequency === 'monthly' ? 'monthly' : 'one-time',
+    transaction_id: transactionId
+  };
+
+  const html = getEmailWrapper('Donation Thank You', `
+    <div style="font-size: 15px; line-height: 1.6; color: #334155;">
+      ${replacePlaceholders(bodyTemplate, data)}
+    </div>
+  `);
+
+  return sendUserEmail({
+    to: email,
+    subject: replacePlaceholders(subjectTemplate, data),
+    html,
+  });
+};
+
 module.exports = {
   sendContactNotification,
   sendVolunteerNotification,
@@ -470,4 +546,6 @@ module.exports = {
   sendVolunteerConfirmation,
   sendPartnershipConfirmation,
   sendFundraiseConfirmation,
+  sendDonationNotification,
+  sendDonationConfirmation,
 };

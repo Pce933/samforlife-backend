@@ -90,7 +90,8 @@ if (MONGO_URL) {
     donor_email: { type: String, default: '' },
     metadata: { type: Map, of: String },
     payment_status: { type: String, default: 'initiated' },
-    status: { type: String, default: 'open' }
+    status: { type: String, default: 'open' },
+    receipt_sent: { type: Boolean, default: false }
   }));
 
   AdminUser = mongoose.model('AdminUser', baseSchemaConfig({
@@ -231,6 +232,9 @@ if (MONGO_URL) {
     email_fundraise_admin_subject: { type: String },
     email_fundraise_user_subject: { type: String },
     email_fundraise_user_body: { type: String },
+    email_donation_admin_subject: { type: String },
+    email_donation_user_subject: { type: String },
+    email_donation_user_body: { type: String },
     updated_at: { type: String, default: nowISO }
   }, {
     versionKey: false,

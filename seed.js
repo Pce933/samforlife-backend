@@ -159,7 +159,10 @@ const DEFAULT_SETTINGS = {
   email_partnership_user_body: `<p>Dear {name},</p>\n<p>Thank you for contacting us regarding a potential partnership between <strong>{company}</strong> and <strong>SAM for Life</strong>.</p>\n<p>We are excited about the possibility of collaborating to drive positive impact. We have received your partnership inquiry, and our development team will review the details and get in touch with you shortly to explore next steps.</p>\n<p>If you have any supporting documents or additional details to share in the meantime, feel free to reply directly to this email.</p>\n<br>\n<p>Warm regards,</p>\n<p><strong>The SAM for Life Team</strong></p>`,
   email_fundraise_admin_subject: '[Fundraising Idea] New Idea Submitted by {name}',
   email_fundraise_user_subject: 'Thank you for your Fundraising Idea - SAM for Life',
-  email_fundraise_user_body: `<p>Dear {name},</p>\n<p>Thank you for submitting your fundraising idea to <strong>SAM for Life</strong>! We love creative and passionate ideas that help raise awareness and support for our cause.</p>\n<p>We have successfully received your idea, and our team will review it. We appreciate you taking the initiative to help fundraise for us.</p>\n<br>\n<p>Warm regards,</p>\n<p><strong>The SAM for Life Team</strong></p>`
+  email_fundraise_user_body: `<p>Dear {name},</p>\n<p>Thank you for submitting your fundraising idea to <strong>SAM for Life</strong>! We love creative and passionate ideas that help raise awareness and support for our cause.</p>\n<p>We have successfully received your idea, and our team will review it. We appreciate you taking the initiative to help fundraise for us.</p>\n<br>\n<p>Warm regards,</p>\n<p><strong>The SAM for Life Team</strong></p>`,
+  email_donation_admin_subject: '[Donation Received] New {frequency} donation of £{amount} from {name}',
+  email_donation_user_subject: 'Thank you for your donation - SAM for Life',
+  email_donation_user_body: `<p>Dear {name},</p>\n<p>Thank you so much for your generous {frequency} donation of <strong>£{amount}</strong> to <strong>SAM for Life</strong>.</p>\n<p>Your support helps us empower young people with special needs, giving them training, jobs, and a route to independence.</p>\n<p><strong>Transaction Reference:</strong> {transaction_id}</p>\n<br>\n<p>With gratitude,</p>\n<p><strong>The SAM for Life Team</strong></p>`
 };
 
 async function seedCollection(model, data) {
@@ -184,7 +187,8 @@ async function seedSettings() {
       'email_contact_admin_subject', 'email_contact_user_subject', 'email_contact_user_body',
       'email_volunteer_admin_subject', 'email_volunteer_user_subject', 'email_volunteer_user_body',
       'email_partnership_admin_subject', 'email_partnership_user_subject', 'email_partnership_user_body',
-      'email_fundraise_admin_subject', 'email_fundraise_user_subject', 'email_fundraise_user_body'
+      'email_fundraise_admin_subject', 'email_fundraise_user_subject', 'email_fundraise_user_body',
+      'email_donation_admin_subject', 'email_donation_user_subject', 'email_donation_user_body'
     ];
     for (const field of emailFields) {
       if (existing[field] === undefined || existing[field] === null || existing[field] === '') {

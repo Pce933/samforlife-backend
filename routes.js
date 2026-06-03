@@ -15,7 +15,9 @@ const {
   sendContactConfirmation,
   sendVolunteerConfirmation,
   sendPartnershipConfirmation,
-  sendFundraiseConfirmation
+  sendFundraiseConfirmation,
+  sendDonationNotification,
+  sendDonationConfirmation
 } = require('./mailer');
 
 const router = express.Router();
@@ -449,6 +451,63 @@ router.post('/payments/checkout/session', async (req, res) => {
 });
 
 /**
+ * Helper to finalize a paid transaction by updating database flags and sending email receipts.
+ */
+const processPaidTransaction = async (session_id) => {
+  try {
+    const txn = await PaymentTransaction.findOne({ session_id });
+    if (!txn || txn.payment_status !== 'paid' || txn.receipt_sent === true) {
+      return;
+    }
+
+    // Set flag and save
+    txn.receipt_sent = true;
+    txn.updated_at = nowISO();
+    
+    if (txn.save) {
+      await txn.save();
+    } else {
+      await PaymentTransaction.updateOne({ session_id }, { $set: { receipt_sent: true, updated_at: nowISO() } });
+    }
+
+    // Fetch SMTP templates
+    const settings = await SiteSettings.findOne({ _singleton: true }) || {};
+
+    const donationData = {
+      name: txn.donor_name || 'Anonymous',
+      email: txn.donor_email || '',
+      amount: txn.amount,
+      frequency: txn.frequency,
+      transaction_id: txn.session_id
+    };
+
+    // Trigger Admin Alert (if configured)
+    sendDonationNotification(donationData, settings.email_donation_admin_subject).catch((err) => {
+      console.error('[SMTP Error] Donation notification email failed to send:', err);
+    });
+
+    // Trigger Donor Confirmation Email (if donor email is available)
+    if (txn.donor_email && txn.donor_email.trim() !== '') {
+      sendDonationConfirmation(
+        txn.donor_email,
+        txn.donor_name,
+        txn.amount,
+        txn.frequency,
+        txn.session_id,
+        settings.email_donation_user_subject,
+        settings.email_donation_user_body
+      ).catch((err) => {
+        console.error('[SMTP Error] Donation user confirmation email failed to send:', err);
+      });
+    }
+
+    console.log(`[Payments] Successfully processed email notifications for transaction ${session_id}`);
+  } catch (err) {
+    console.error('[Payments] Failed to process email receipt notifications:', err);
+  }
+};
+
+/**
  * GET /api/payments/checkout/status/:session_id
  * Returns payment status for a session
  */
@@ -460,6 +519,10 @@ router.get('/payments/checkout/status/:session_id', async (req, res) => {
     // Return cached result if already paid
     const existing = await PaymentTransaction.findOne({ session_id });
     if (existing && existing.payment_status === 'paid') {
+      // Trigger emails just in case it was not processed yet (e.g. if previous send failed)
+      if (existing.receipt_sent !== true) {
+        processPaidTransaction(session_id).catch(err => console.error('[SMTP Error] processPaidTransaction failed:', err));
+      }
       return res.json({
         session_id,
         status: existing.status,
@@ -499,6 +562,11 @@ router.get('/payments/checkout/status/:session_id', async (req, res) => {
         updated_at: nowISO()
       }
     });
+
+    // If status is paid, trigger receipt emails
+    if (paymentStatus === 'paid') {
+      processPaidTransaction(session_id).catch(err => console.error('[SMTP Error] processPaidTransaction failed:', err));
+    }
 
     res.json({
       session_id,
@@ -1189,6 +1257,9 @@ router.post('/webhook/stripe', async (req, res) => {
           updated_at: nowISO()
         }
       });
+      if (session.payment_status === 'paid') {
+        processPaidTransaction(session.id).catch(err => console.error('[SMTP Error] processPaidTransaction failed in webhook:', err));
+      }
     }
 
     res.json({ received: true });
