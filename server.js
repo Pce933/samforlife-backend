@@ -66,44 +66,51 @@ app.get('/api/db-net-test', async (req, res) => {
   const dns = require('dns');
   const net = require('net');
   
-  const host = 'ac-jh5b7dd-shard-00-00.z44fllm.mongodb.net';
+  const hosts = [
+    'ac-jh5b7dd-shard-00-00.z44fllm.mongodb.net',
+    'ac-jh5b7dd-shard-00-01.z44fllm.mongodb.net',
+    'ac-jh5b7dd-shard-00-02.z44fllm.mongodb.net'
+  ];
   const port = 27017;
   
-  const results = {
-    dnsResolve: null,
-    tcpConnect: null,
-    error: null
-  };
+  const results = {};
   
-  try {
-    results.dnsResolve = await new Promise((resolve) => {
-      dns.resolve4(host, (err, addresses) => {
-        if (err) resolve({ error: err.message });
-        else resolve(addresses);
-      });
-    });
+  for (const host of hosts) {
+    results[host] = {
+      dnsResolve: null,
+      tcpConnect: null
+    };
     
-    results.tcpConnect = await new Promise((resolve) => {
-      const socket = new net.Socket();
-      socket.setTimeout(3000);
-      
-      socket.connect(port, host, () => {
-        socket.destroy();
-        resolve({ status: 'connected' });
+    try {
+      results[host].dnsResolve = await new Promise((resolve) => {
+        dns.resolve4(host, (err, addresses) => {
+          if (err) resolve({ error: err.message });
+          else resolve(addresses);
+        });
       });
       
-      socket.on('error', (err) => {
-        socket.destroy();
-        resolve({ status: 'failed', error: err.message });
+      results[host].tcpConnect = await new Promise((resolve) => {
+        const socket = new net.Socket();
+        socket.setTimeout(3000);
+        
+        socket.connect(port, host, () => {
+          socket.destroy();
+          resolve({ status: 'connected' });
+        });
+        
+        socket.on('error', (err) => {
+          socket.destroy();
+          resolve({ status: 'failed', error: err.message });
+        });
+        
+        socket.on('timeout', () => {
+          socket.destroy();
+          resolve({ status: 'timeout' });
+        });
       });
-      
-      socket.on('timeout', () => {
-        socket.destroy();
-        resolve({ status: 'timeout' });
-      });
-    });
-  } catch (err) {
-    results.error = err.message;
+    } catch (err) {
+      results[host].error = err.message;
+    }
   }
   
   res.json(results);
