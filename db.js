@@ -215,6 +215,10 @@ if (MONGO_URL) {
     social_facebook: { type: String },
     social_instagram: { type: String },
     social_linkedin: { type: String },
+    receipt_charity_number: { type: String },
+    receipt_address: { type: String },
+    receipt_thank_you: { type: String },
+    invoice_terms: { type: String },
     updated_at: { type: String, default: nowISO }
   }, {
     versionKey: false,
