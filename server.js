@@ -46,6 +46,19 @@ app.get('/api', (req, res) => {
   res.json({ message: 'SAM for Life API', version: '2.0.0' });
 });
 
+app.get('/api/db-verify', (req, res) => {
+  const mongoose = require('mongoose');
+  let masked = 'not set';
+  if (process.env.MONGO_URL) {
+    masked = process.env.MONGO_URL.replace(/:([^@]+)@/, ':****@');
+  }
+  res.json({
+    readyState: mongoose.connection.readyState,
+    readyStateText: ['disconnected', 'connected', 'connecting', 'disconnecting'][mongoose.connection.readyState],
+    url: masked
+  });
+});
+
 app.use('/api', apiRouter);
 
 // ── Export for Vercel Serverless ───────────────────────────────
