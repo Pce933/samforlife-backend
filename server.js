@@ -62,6 +62,53 @@ app.get('/api/db-status', (req, res) => {
   });
 });
 
+app.get('/api/db-net-test', async (req, res) => {
+  const dns = require('dns');
+  const net = require('net');
+  
+  const host = 'ac-jh5b7dd-shard-00-00.z44fllm.mongodb.net';
+  const port = 27017;
+  
+  const results = {
+    dnsResolve: null,
+    tcpConnect: null,
+    error: null
+  };
+  
+  try {
+    results.dnsResolve = await new Promise((resolve) => {
+      dns.resolve4(host, (err, addresses) => {
+        if (err) resolve({ error: err.message });
+        else resolve(addresses);
+      });
+    });
+    
+    results.tcpConnect = await new Promise((resolve) => {
+      const socket = new net.Socket();
+      socket.setTimeout(3000);
+      
+      socket.connect(port, host, () => {
+        socket.destroy();
+        resolve({ status: 'connected' });
+      });
+      
+      socket.on('error', (err) => {
+        socket.destroy();
+        resolve({ status: 'failed', error: err.message });
+      });
+      
+      socket.on('timeout', () => {
+        socket.destroy();
+        resolve({ status: 'timeout' });
+      });
+    });
+  } catch (err) {
+    results.error = err.message;
+  }
+  
+  res.json(results);
+});
+
 app.use('/api', apiRouter);
 
 // ── Export for Vercel Serverless ───────────────────────────────
