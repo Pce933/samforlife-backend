@@ -11,7 +11,11 @@ const {
   sendContactNotification,
   sendVolunteerNotification,
   sendPartnershipNotification,
-  sendFundraiseNotification
+  sendFundraiseNotification,
+  sendContactConfirmation,
+  sendVolunteerConfirmation,
+  sendPartnershipConfirmation,
+  sendFundraiseConfirmation
 } = require('./mailer');
 
 const router = express.Router();
@@ -116,9 +120,14 @@ router.post('/forms/contact', async (req, res) => {
 
     const doc = await Contact.create({ id: newID(), name, email, subject, message, status: 'new', created_at: nowISO() });
     
-    // Send email notification (asynchronously to avoid blocking response)
+    // Send email notification to admin (asynchronously to avoid blocking response)
     sendContactNotification({ name, email, subject, message }).catch((err) => {
-      console.error('[SMTP Error] Contact email failed to send:', err);
+      console.error('[SMTP Error] Contact notification email failed to send:', err);
+    });
+
+    // Send auto-reply confirmation to the visitor
+    sendContactConfirmation(email, name).catch((err) => {
+      console.error('[SMTP Error] Contact user confirmation email failed to send:', err);
     });
 
     res.json({ ok: true, id: doc.id });
@@ -139,9 +148,14 @@ router.post('/forms/volunteer', async (req, res) => {
 
     const doc = await Volunteer.create({ id: newID(), name, email, phone, skills, availability, why, status: 'new', created_at: nowISO() });
     
-    // Send email notification (asynchronously to avoid blocking response)
+    // Send email notification to admin (asynchronously to avoid blocking response)
     sendVolunteerNotification({ name, email, phone, skills, availability, why }).catch((err) => {
-      console.error('[SMTP Error] Volunteer email failed to send:', err);
+      console.error('[SMTP Error] Volunteer notification email failed to send:', err);
+    });
+
+    // Send auto-reply confirmation to the volunteer
+    sendVolunteerConfirmation(email, name).catch((err) => {
+      console.error('[SMTP Error] Volunteer user confirmation email failed to send:', err);
     });
 
     res.json({ ok: true, id: doc.id });
@@ -162,9 +176,14 @@ router.post('/forms/partnership', async (req, res) => {
 
     const doc = await Partnership.create({ id: newID(), company, name, email, phone, interest, message, status: 'new', created_at: nowISO() });
     
-    // Send email notification (asynchronously to avoid blocking response)
+    // Send email notification to admin (asynchronously to avoid blocking response)
     sendPartnershipNotification({ company, name, email, phone, interest, message }).catch((err) => {
-      console.error('[SMTP Error] Partnership email failed to send:', err);
+      console.error('[SMTP Error] Partnership notification email failed to send:', err);
+    });
+
+    // Send auto-reply confirmation to the partner
+    sendPartnershipConfirmation(email, name, company).catch((err) => {
+      console.error('[SMTP Error] Partnership user confirmation email failed to send:', err);
     });
 
     res.json({ ok: true, id: doc.id });
@@ -205,10 +224,17 @@ router.post('/forms/fundraise-idea', async (req, res) => {
 
     const doc = await FundraiseSubmission.create({ id: newID(), name, email, idea, status: 'new', created_at: nowISO() });
     
-    // Send email notification (asynchronously to avoid blocking response)
+    // Send email notification to admin (asynchronously to avoid blocking response)
     sendFundraiseNotification({ name, email, idea }).catch((err) => {
-      console.error('[SMTP Error] Fundraise email failed to send:', err);
+      console.error('[SMTP Error] Fundraise notification email failed to send:', err);
     });
+
+    // Send auto-reply confirmation to the fundraiser (if email is provided)
+    if (email && email.trim() !== '') {
+      sendFundraiseConfirmation(email, name).catch((err) => {
+        console.error('[SMTP Error] Fundraise user confirmation email failed to send:', err);
+      });
+    }
 
     res.json({ ok: true, id: doc.id });
   } catch (err) {
