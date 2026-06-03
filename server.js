@@ -41,6 +41,18 @@ db.once('open', async () => {
   }
 });
 
+// ── DB Connection middleware for serverless ──────────────────
+app.use(async (req, res, next) => {
+  try {
+    const { connectDB } = require('./db');
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error('Database connection middleware failed:', err);
+    res.status(500).json({ detail: 'Database connection failed: ' + err.message });
+  }
+});
+
 // ── Routes ─────────────────────────────────────────────────────
 app.get('/api', (req, res) => {
   res.json({ message: 'SAM for Life API', version: '2.0.0' });

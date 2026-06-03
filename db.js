@@ -459,8 +459,24 @@ if (MONGO_URL) {
   SiteSettings = new MockSiteSettingsModel();
 }
 
+const connectDB = async () => {
+  if (!MONGO_URL) return null;
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
+  if (mongoose.connection.readyState === 2) {
+    await new Promise((resolve) => {
+      mongoose.connection.once('open', resolve);
+    });
+    return mongoose.connection;
+  }
+  await mongoose.connect(MONGO_URL);
+  return mongoose.connection;
+};
+
 module.exports = {
   db: dbConnection,
+  connectDB,
   Contact,
   Volunteer,
   Partnership,
