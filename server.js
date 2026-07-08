@@ -11,9 +11,22 @@ const app = express();
 const PORT = process.env.PORT || 8000;
 
 // ── CORS ───────────────────────────────────────────────────────
-const allowedOrigins = process.env.FRONTEND_URL
-  ? [process.env.FRONTEND_URL.replace(/\/$/, ''), 'http://localhost:3000']
-  : '*';
+const allowedOrigins = ['http://localhost:3000'];
+if (process.env.FRONTEND_URL) {
+  const originUrl = process.env.FRONTEND_URL.replace(/\/$/, '');
+  allowedOrigins.push(originUrl);
+  
+  // Automatically whitelist both www and apex versions of the production domain
+  if (originUrl.startsWith('https://')) {
+    if (originUrl.includes('www.')) {
+      allowedOrigins.push(originUrl.replace('www.', ''));
+    } else {
+      allowedOrigins.push(originUrl.replace('https://', 'https://www.'));
+    }
+  }
+} else {
+  allowedOrigins.push('*');
+}
 
 app.use(cors({
   origin: allowedOrigins,
