@@ -148,15 +148,13 @@ router.post('/forms/contact', async (req, res) => {
     // Fetch custom settings templates
     const settings = await SiteSettings.findOne({ _singleton: true }) || {};
     
-    // Send email notification to admin (asynchronously to avoid blocking response)
-    sendContactNotification({ name, email, subject, message }, settings.email_contact_admin_subject).catch((err) => {
-      console.error('[SMTP Error] Contact notification email failed to send:', err);
-    });
-
-    // Send auto-reply confirmation to the visitor
-    sendContactConfirmation(email, name, settings.email_contact_user_subject, settings.email_contact_user_body).catch((err) => {
-      console.error('[SMTP Error] Contact user confirmation email failed to send:', err);
-    });
+    // Send email notification and auto-reply in parallel (await to ensure completion on Vercel)
+    await Promise.all([
+      sendContactNotification({ name, email, subject, message }, settings.email_contact_admin_subject)
+        .catch(err => console.error('[SMTP Error] Contact notification email failed:', err)),
+      sendContactConfirmation(email, name, settings.email_contact_user_subject, settings.email_contact_user_body)
+        .catch(err => console.error('[SMTP Error] Contact user confirmation email failed:', err))
+    ]);
 
     res.json({ ok: true, id: doc.id });
   } catch (err) {
@@ -179,15 +177,13 @@ router.post('/forms/volunteer', async (req, res) => {
     // Fetch custom settings templates
     const settings = await SiteSettings.findOne({ _singleton: true }) || {};
 
-    // Send email notification to admin (asynchronously to avoid blocking response)
-    sendVolunteerNotification({ name, email, phone, skills, availability, why }, settings.email_volunteer_admin_subject).catch((err) => {
-      console.error('[SMTP Error] Volunteer notification email failed to send:', err);
-    });
-
-    // Send auto-reply confirmation to the volunteer
-    sendVolunteerConfirmation(email, name, settings.email_volunteer_user_subject, settings.email_volunteer_user_body).catch((err) => {
-      console.error('[SMTP Error] Volunteer user confirmation email failed to send:', err);
-    });
+    // Send email notification and auto-reply in parallel (await to ensure completion on Vercel)
+    await Promise.all([
+      sendVolunteerNotification({ name, email, phone, skills, availability, why }, settings.email_volunteer_admin_subject)
+        .catch(err => console.error('[SMTP Error] Volunteer notification email failed:', err)),
+      sendVolunteerConfirmation(email, name, settings.email_volunteer_user_subject, settings.email_volunteer_user_body)
+        .catch(err => console.error('[SMTP Error] Volunteer user confirmation email failed:', err))
+    ]);
 
     res.json({ ok: true, id: doc.id });
   } catch (err) {
@@ -210,15 +206,13 @@ router.post('/forms/partnership', async (req, res) => {
     // Fetch custom settings templates
     const settings = await SiteSettings.findOne({ _singleton: true }) || {};
 
-    // Send email notification to admin (asynchronously to avoid blocking response)
-    sendPartnershipNotification({ company, name, email, phone, interest, message }, settings.email_partnership_admin_subject).catch((err) => {
-      console.error('[SMTP Error] Partnership notification email failed to send:', err);
-    });
-
-    // Send auto-reply confirmation to the partner
-    sendPartnershipConfirmation(email, name, company, settings.email_partnership_user_subject, settings.email_partnership_user_body).catch((err) => {
-      console.error('[SMTP Error] Partnership user confirmation email failed to send:', err);
-    });
+    // Send email notification and auto-reply in parallel (await to ensure completion on Vercel)
+    await Promise.all([
+      sendPartnershipNotification({ company, name, email, phone, interest, message }, settings.email_partnership_admin_subject)
+        .catch(err => console.error('[SMTP Error] Partnership notification email failed:', err)),
+      sendPartnershipConfirmation(email, name, company, settings.email_partnership_user_subject, settings.email_partnership_user_body)
+        .catch(err => console.error('[SMTP Error] Partnership user confirmation email failed:', err))
+    ]);
 
     res.json({ ok: true, id: doc.id });
   } catch (err) {
@@ -261,17 +255,24 @@ router.post('/forms/fundraise-idea', async (req, res) => {
     // Fetch custom settings templates
     const settings = await SiteSettings.findOne({ _singleton: true }) || {};
 
-    // Send email notification to admin (asynchronously to avoid blocking response)
-    sendFundraiseNotification({ name, email, idea }, settings.email_fundraise_admin_subject).catch((err) => {
-      console.error('[SMTP Error] Fundraise notification email failed to send:', err);
-    });
+    const emailPromises = [];
+
+    // Send email notification to admin
+    emailPromises.push(
+      sendFundraiseNotification({ name, email, idea }, settings.email_fundraise_admin_subject)
+        .catch(err => console.error('[SMTP Error] Fundraise notification email failed:', err))
+    );
 
     // Send auto-reply confirmation to the fundraiser (if email is provided)
     if (email && email.trim() !== '') {
-      sendFundraiseConfirmation(email, name, settings.email_fundraise_user_subject, settings.email_fundraise_user_body).catch((err) => {
-        console.error('[SMTP Error] Fundraise user confirmation email failed to send:', err);
-      });
+      emailPromises.push(
+        sendFundraiseConfirmation(email, name, settings.email_fundraise_user_subject, settings.email_fundraise_user_body)
+          .catch(err => console.error('[SMTP Error] Fundraise user confirmation email failed:', err))
+      );
     }
+
+    // Await all email promises to complete on Vercel
+    await Promise.all(emailPromises);
 
     res.json({ ok: true, id: doc.id });
   } catch (err) {
@@ -504,25 +505,31 @@ const processPaidTransaction = async (session_id) => {
       transaction_id: txn.session_id
     };
 
+    const emailPromises = [];
+
     // Trigger Admin Alert (if configured)
-    sendDonationNotification(donationData, settings.email_donation_admin_subject).catch((err) => {
-      console.error('[SMTP Error] Donation notification email failed to send:', err);
-    });
+    emailPromises.push(
+      sendDonationNotification(donationData, settings.email_donation_admin_subject)
+        .catch(err => console.error('[SMTP Error] Donation notification email failed to send:', err))
+    );
 
     // Trigger Donor Confirmation Email (if donor email is available)
     if (txn.donor_email && txn.donor_email.trim() !== '') {
-      sendDonationConfirmation(
-        txn.donor_email,
-        txn.donor_name,
-        txn.amount,
-        txn.frequency,
-        txn.session_id,
-        settings.email_donation_user_subject,
-        settings.email_donation_user_body
-      ).catch((err) => {
-        console.error('[SMTP Error] Donation user confirmation email failed to send:', err);
-      });
+      emailPromises.push(
+        sendDonationConfirmation(
+          txn.donor_email,
+          txn.donor_name,
+          txn.amount,
+          txn.frequency,
+          txn.session_id,
+          settings.email_donation_user_subject,
+          settings.email_donation_user_body
+        ).catch(err => console.error('[SMTP Error] Donation user confirmation email failed to send:', err))
+      );
     }
+
+    // Await all emails to ensure Vercel doesn't freeze the environment before they complete
+    await Promise.all(emailPromises);
 
     console.log(`[Payments] Successfully processed email notifications for transaction ${session_id}`);
   } catch (err) {
@@ -544,7 +551,7 @@ router.get('/payments/checkout/status/:session_id', async (req, res) => {
     if (existing && existing.payment_status === 'paid') {
       // Trigger emails just in case it was not processed yet (e.g. if previous send failed)
       if (existing.receipt_sent !== true) {
-        processPaidTransaction(session_id).catch(err => console.error('[SMTP Error] processPaidTransaction failed:', err));
+        await processPaidTransaction(session_id);
       }
       return res.json({
         session_id,
@@ -588,7 +595,7 @@ router.get('/payments/checkout/status/:session_id', async (req, res) => {
 
     // If status is paid, trigger receipt emails
     if (paymentStatus === 'paid') {
-      processPaidTransaction(session_id).catch(err => console.error('[SMTP Error] processPaidTransaction failed:', err));
+      await processPaidTransaction(session_id);
     }
 
     res.json({
@@ -1281,7 +1288,7 @@ router.post('/webhook/stripe', async (req, res) => {
         }
       });
       if (session.payment_status === 'paid') {
-        processPaidTransaction(session.id).catch(err => console.error('[SMTP Error] processPaidTransaction failed in webhook:', err));
+        await processPaidTransaction(session.id);
       }
     }
 
